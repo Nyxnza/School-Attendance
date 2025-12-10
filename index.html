@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Student Attendance System</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background: #f1f6fb;
+        padding: 20px;
+        color: #333;
+        position: relative;
+    }
+
+    h1 {
+        color: #1e5fa8;
+        margin-bottom: 20px;
+        text-align: center;
+    }
+
+    /* Calendar box */
+    #calendarBox {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        background: #ffffff;
+        width: 240px;
+        padding: 15px;
+        border-radius: 12px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        border-top: 6px solid #1e5fa8;
+    }
+
+    #calendarHeader {
+        text-align: center;
+        font-weight: bold;
+        color: #1e5fa8;
+        margin-bottom: 10px;
+        font-size: 16px;
+    }
+
+    #calendar {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 4px;
+    }
+
+    .day {
+        text-align: center;
+        padding: 6px;
+        border-radius: 6px;
+        font-size: 13px;
+    }
+
+    .today {
+        background: #d9e8ff;
+        font-weight: bold;
+        border: 1px solid #1e5fa8;
+    }
+
+    .marked {
+        background: #1e5fa8;
+        color: white;
+        font-weight: bold;
+    }
+
+    .card {
+        background: #ffffff;
+        padding: 20px;
+        width: 400px;
+        margin: 20px auto;
+        border-radius: 12px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        border-top: 6px solid #1e5fa8;
+    }
+
+    h2 {
+        color: #1e5fa8;
+        margin: 0 0 10px 0;
+    }
+
+    input, button {
+        width: 100%;
+        padding: 12px;
+        margin-top: 10px;
+        border-radius: 6px;
+        border: 1px solid #ccc;
+        font-size: 15px;
+    }
+
+    button {
+        background: #1e5fa8;
+        color: white;
+        border: none;
+        font-weight: bold;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+
+    button:hover {
+        background: #2b81d6;
+    }
+
+    #result {
+        margin-top: 10px;
+        padding: 10px;
+        background: #e8f1ff;
+        border-left: 4px solid #1e5fa8;
+        border-radius: 6px;
+    }
+
+    #adminBtn {
+        background: #23395d;
+        width: 200px;
+        margin: 30px auto;
+        display: block;
+    }
+
+    #adminBtn:hover {
+        background: #35507a;
+    }
+</style>
+</head>
+<body>
+
+<h1>Student Attendance System</h1>
+
+<!-- Calendar -->
+<div id="calendarBox">
+    <div id="calendarHeader"></div>
+    <div id="calendar"></div>
+</div>
+
+<!-- Create Account -->
+<div class="card">
+    <h2>Create Account</h2>
+    <input type="text" id="name" placeholder="Enter Name">
+    <input type="text" id="section" placeholder="Enter Section">
+    <button onclick="createAccount()">Create Account</button>
+    <p id="createMsg"></p>
+</div>
+
+<!-- Search Student -->
+<div class="card">
+    <h2>Search Student</h2>
+    <input type="text" id="search" placeholder="Enter Name to Search">
+    <button onclick="searchStudent()">Search</button>
+    <div id="result"></div>
+</div>
+
+<button id="adminBtn" onclick="window.location.href='adminLogIn.html'">Admin Login</button>
+
+<script>
+/* ------------------------------------
+      INITIALIZE DEFAULT ADMIN
+------------------------------------ */
+function initializeAdmin() {
+    if (!localStorage.getItem("admins")) {
+        const defaultAdmin = [
+            { username: "staff_admin", password: "67420" }
+        ];
+        localStorage.setItem("admins", JSON.stringify(defaultAdmin));
+    }
+}
+initializeAdmin();
+
+/* --------------------------
+      CREATE ACCOUNT
+--------------------------- */
+function createAccount() {
+    let name = document.getElementById("name").value.trim();
+    let section = document.getElementById("section").value.trim();
+    let msg = document.getElementById("createMsg");
+
+    if (!name || !section) {
+        msg.textContent = "Please fill in all fields.";
+        msg.style.color = "red";
+        return;
+    }
+
+    let students = JSON.parse(localStorage.getItem("students")) || {};
+
+    if (students[name]) {
+        msg.textContent = "Account already exists!";
+        msg.style.color = "red";
+        return;
+    }
+
+    students[name] = {
+        name,
+        section,
+        attendance: 0,
+        lastAttendance: null,
+        attendanceDates: []  // <-- added list of marked dates
+    };
+
+    localStorage.setItem("students", JSON.stringify(students));
+
+    msg.textContent = "Account created successfully!";
+    msg.style.color = "green";
+
+    document.getElementById("name").value = "";
+    document.getElementById("section").value = "";
+}
+
+/* --------------------------
+        SEARCH STUDENT
+--------------------------- */
+function searchStudent() {
+    let searchName = document.getElementById("search").value.trim();
+    let result = document.getElementById("result");
+
+    let students = JSON.parse(localStorage.getItem("students")) || {};
+
+    if (!students[searchName]) {
+        result.innerHTML = `<p style="color:red">Student not found.</p>`;
+        return;
+    }
+
+    let student = students[searchName];
+
+    result.innerHTML = `
+        <p><strong>Name:</strong> ${student.name}</p>
+        <p><strong>Section:</strong> ${student.section}</p>
+        <p><strong>Attendance:</strong> ${student.attendance}</p>
+        <button onclick="confirmAttendance('${student.name}')">Confirm Attendance</button>
+        <p id="attMsg"></p>
+    `;
+
+    loadCalendar(student.attendanceDates);
+}
+
+/* --------------------------
+     CONFIRM ATTENDANCE
+--------------------------- */
+function confirmAttendance(name) {
+    let students = JSON.parse(localStorage.getItem("students")) || {};
+    let student = students[name];
+    let today = new Date().toISOString().split("T")[0]; 
+    let attMsg = document.getElementById("attMsg");
+
+    if (student.lastAttendance === today) {
+        attMsg.textContent = "Attendance already confirmed today.";
+        attMsg.style.color = "red";
+        return;
+    }
+
+    student.attendance += 1;
+    student.lastAttendance = today;
+
+    if (!student.attendanceDates.includes(today)) {
+        student.attendanceDates.push(today);
+    }
+
+    students[name] = student;
+    localStorage.setItem("students", JSON.stringify(students));
+
+    attMsg.textContent = "Attendance confirmed!";
+    attMsg.style.color = "green";
+
+    searchStudent();
+}
+
+/* --------------------------
+          CALENDAR
+--------------------------- */
+function loadCalendar(markedDates = []) {
+    const calendar = document.getElementById("calendar");
+    const header = document.getElementById("calendarHeader");
+
+    calendar.innerHTML = "";
+
+    let today = new Date();
+    let year = today.getFullYear();
+    let month = today.getMonth();
+
+    header.textContent = today.toLocaleString("default", { month: "long" }) + " " + year;
+
+    let firstDay = new Date(year, month, 1).getDay();
+    let numDays = new Date(year, month + 1, 0).getDate();
+
+    for (let i = 0; i < firstDay; i++) {
+        calendar.innerHTML += `<div></div>`;
+    }
+
+    for (let d = 1; d <= numDays; d++) {
+        let dateStr = `${year}-${String(month + 1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+
+        let classes = "day";
+
+        if (dateStr === today.toISOString().split("T")[0]) {
+            classes += " today";
+        }
+
+        if (markedDates.includes(dateStr)) {
+            classes += " marked";
+        }
+
+        calendar.innerHTML += `<div class="${classes}">${d}</div>`;
+    }
+}
+
+// Load default calendar (blank)
+loadCalendar([]);
+
+</script>
+
+</body>
+</html>

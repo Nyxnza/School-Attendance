@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Admin Login</title>
+<style>
+    body {
+        font-family: Arial;
+        background: #f1f6fb;
+        padding: 40px;
+    }
+
+    .card {
+        background: white;
+        padding: 25px;
+        width: 300px;
+        margin: auto;
+        border-radius: 12px;
+        border-top: 6px solid #1e5fa8;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+
+    h2 {
+        color: #1e5fa8;
+        text-align: center;
+    }
+
+    input, button {
+        width: 100%;
+        padding: 12px;
+        margin-top: 12px;
+        border-radius: 6px;
+        border: 1px solid #bbb;
+        font-size: 15px;
+    }
+
+    button {
+        background: #1e5fa8;
+        color: white;
+        border: none;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+
+    button:hover {
+        background: #2b81d6;
+    }
+
+    #msg {
+        text-align: center;
+        margin-top: 10px;
+    }
+</style>
+</head>
+<body>
+
+<div class="card">
+    <h2>Admin Login</h2>
+    <input type="text" id="user" placeholder="Username">
+    <input type="password" id="pass" placeholder="Password">
+    <button onclick="adminLogin()">Login</button>
+    <p id="msg"></p>
+</div>
+
+<script>
+function adminLogin() {
+    let u = document.getElementById("user").value;
+    let p = document.getElementById("pass").value;
+    let msg = document.getElementById("msg");
+
+    let admins = JSON.parse(localStorage.getItem("admins")) || [];
+
+    let ok = admins.find(a => a.username === u && a.password === p);
+
+    if (ok) {
+        localStorage.setItem("adminLoggedIn", "true");
+        window.location.href = "adminDashboard.html";
+    } else {
+        msg.textContent = "Invalid credentials.";
+        msg.style.color = "red";
+    }
+}
+</script>
+
+</body>
+</html>

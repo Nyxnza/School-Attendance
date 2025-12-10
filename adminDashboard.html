@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Admin Dashboard</title>
+<style>
+    body {
+        font-family: Arial;
+        background: #f1f6fb;
+        padding: 20px;
+        color: #333;
+    }
+
+    h1 {
+        text-align: center;
+        color: #1e5fa8;
+        margin-bottom: 20px;
+    }
+
+    select {
+        padding: 8px;
+        border-radius: 6px;
+        border: 1px solid #ccc;
+        font-size: 14px;
+        margin-bottom: 15px;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    th {
+        background: #1e5fa8;
+        color: white;
+        padding: 12px;
+        font-size: 16px;
+    }
+
+    td {
+        padding: 10px;
+        border-bottom: 1px solid #ddd;
+    }
+
+    tr:nth-child(even) {
+        background: #f8fbff;
+    }
+
+    button {
+        padding: 6px 12px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: bold;
+        transition: 0.2s;
+    }
+
+    button:hover {
+        opacity: 0.8;
+    }
+
+    /* Action buttons */
+    .resetBtn {
+        background: #2b81d6;
+        color: white;
+    }
+
+    .deleteBtn {
+        background: #d9534f;
+        color: white;
+    }
+
+    #logout {
+        background: #23395d;
+        color: white;
+        float: right;
+        margin-bottom: 20px;
+    }
+
+    #logout:hover {
+        background: #35507a;
+    }
+
+    #summary {
+        margin: 10px 0;
+        font-weight: bold;
+        color: #1e5fa8;
+    }
+</style>
+</head>
+<body>
+
+<h1>Admin Dashboard</h1>
+
+<button id="logout" onclick="logout()">Logout</button>
+
+<h2>Filter by Section</h2>
+<select id="sectionSelect" onchange="filterSection()">
+    <option value="all">All Sections</option>
+</select>
+
+<p id="summary"></p>
+
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Section</th>
+            <th>Attendance</th>
+            <th>Last Attendance</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+</table>
+
+<script>
+if (localStorage.getItem("adminLoggedIn") !== "true") {
+    window.location.href = "adminLogIn.html";
+}
+
+let students = JSON.parse(localStorage.getItem("students")) || {};
+
+function loadStudents(filteredSection = "all") {
+    students = JSON.parse(localStorage.getItem("students")) || {};
+    let body = document.getElementById("tableBody");
+    let sectionSelect = document.getElementById("sectionSelect");
+
+    // Populate section dropdown
+    let sections = new Set();
+    for (let s in students) {
+        sections.add(students[s].section);
+    }
+    sectionSelect.innerHTML = '<option value="all">All Sections</option>';
+    sections.forEach(sec => {
+        sectionSelect.innerHTML += `<option value="${sec}">${sec}</option>`;
+    });
+
+    // Filter students
+    let displayedStudents = Object.values(students);
+    if (filteredSection !== "all") {
+        displayedStudents = displayedStudents.filter(s => s.section === filteredSection);
+    }
+
+    // Update summary
+    let today = new Date().toISOString().split("T")[0];
+    let presentCount = displayedStudents.filter(s => s.lastAttendance === today).length;
+    let absentCount = displayedStudents.length - presentCount;
+    document.getElementById("summary").textContent = `Present Today: ${presentCount} | Absent Today: ${absentCount}`;
+
+    // Display table
+    body.innerHTML = "";
+    displayedStudents.forEach(st => {
+        body.innerHTML += `
+        <tr>
+            <td>${st.name}</td>
+            <td>${st.section}</td>
+            <td>${st.attendance}</td>
+            <td>${st.lastAttendance || "None"}</td>
+            <td>
+                <button class="resetBtn" onclick="resetAttendance('${st.name}')">Reset</button>
+                <button class="deleteBtn" onclick="removeStudent('${st.name}')">Delete</button>
+            </td>
+        </tr>`;
+    });
+}
+
+function filterSection() {
+    let sec = document.getElementById("sectionSelect").value;
+    loadStudents(sec);
+}
+
+function resetAttendance(name) {
+    students = JSON.parse(localStorage.getItem("students"));
+    students[name].attendance = 0;
+    students[name].lastAttendance = null;
+    students[name].attendanceDates = [];
+    localStorage.setItem("students", JSON.stringify(students));
+    filterSection();
+}
+
+function removeStudent(name) {
+    students = JSON.parse(localStorage.getItem("students"));
+    delete students[name];
+    localStorage.setItem("students", JSON.stringify(students));
+    filterSection();
+}
+
+function logout() {
+    localStorage.removeItem("adminLoggedIn");
+    window.location.href = "adminLogIn.html";
+}
+
+loadStudents();
+</script>
+
+</body>
+</html>
